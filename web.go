@@ -2,25 +2,29 @@ package main
 
 import (
 	"os"
-	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"log"
 	"flag"
+	"io/ioutil"
+	"encoding/json"
 	"net/http"
+	"goplayground/auth"
 )
 
-//// Config preparation ////
+// ================== //
+// Config preparation //
+// ================== //
 
-var port = flag.String("port", ":8080", "Listen address")
+var PORT = flag.String("port", ":8080", "Listen address")
 
 const DB_CONFIG = "config.json"
 
 type DBConfig struct {
-	Name string
-	Host string
-	Port string
-	User string
-	Pass string
+	Host 	string 	`json:"host"`
+	Port 	int		`json:"port"`
+	Name 	string 	`json:"name"`
+	User 	string 	`json:"user"`
+	Pass 	string 	`json:"pass"`
 }
 
 func ReadConfig(configfile string) (configuration DBConfig) {
@@ -37,31 +41,32 @@ func ReadConfig(configfile string) (configuration DBConfig) {
 }
 
 
-//// Web app ////
+// ======== //
+// Core app //
+// ======== //
 
 func NewConfig(name string) *DBConfig {
-	var dbconfig = ReadConfig(DB_CONFIG) 
+	var dbconfig = ReadConfig(DB_CONFIG)
 	return &dbconfig
 }
 
 func (s *DBConfig) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	b, err := json.Marshal(s)
 	if err != nil {
 		fmt.Println("json code error:", err)
 	}
-	c, err := w.Write(b)
+	_, err = w.Write(b)
 	if err != nil {
 		fmt.Println("json write error:", err)
 	}
-	fmt.Println("c =", c)
 }
 
 func main() {
-	// var dbconfig = ReadConfig(DB_CONFIG) 
-	// fmt.Printf("%T\n%v\n", dbconfig, dbconfig)
+	fmt.Printf("F=(%T)%v\n", auth.F(), auth.F())	
 
 	// routes
 	http.Handle("/", NewConfig(DB_CONFIG))
 
-	http.ListenAndServe(*port, nil)	
+	log.Fatal(http.ListenAndServe(*PORT, nil))
 }
