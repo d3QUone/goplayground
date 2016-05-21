@@ -5,7 +5,15 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"flag"
+	"net/http"
 )
+
+//// Config preparation ////
+
+var port = flag.String("port", ":8080", "Listen address")
+
+const DB_CONFIG = "config.json"
 
 type DBConfig struct {
 	Name string
@@ -29,26 +37,31 @@ func ReadConfig(configfile string) (configuration DBConfig) {
 }
 
 
-type Page struct {
-    Title string
-    Body  []byte
+//// Web app ////
+
+func NewConfig(name string) *DBConfig {
+	var dbconfig = ReadConfig(DB_CONFIG) 
+	return &dbconfig
 }
 
-func (p *Page) save() error {
-    filename := p.Title + ".txt"
-    return ioutil.WriteFile(filename, p.Body, 0600)
+func (s *DBConfig) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	b, err := json.Marshal(s)
+	if err != nil {
+		fmt.Println("json code error:", err)
+	}
+	c, err := w.Write(b)
+	if err != nil {
+		fmt.Println("json write error:", err)
+	}
+	fmt.Println("c =", c)
 }
-
 
 func main() {
-	var dbconfig = ReadConfig("config.json") 
-	fmt.Printf("%T\n%v\n", dbconfig, dbconfig)
-	fmt.Printf("name=%v\n", dbconfig.Name)
+	// var dbconfig = ReadConfig(DB_CONFIG) 
+	// fmt.Printf("%T\n%v\n", dbconfig, dbconfig)
 
-	// b, err := json.Marshal(dbconfig)
-	// if err != nil {
-	// 	fmt.Println("json code error:", err)
-	// }
-	// fmt.Println(b)
+	// routes
+	http.Handle("/", NewConfig(DB_CONFIG))
 
+	http.ListenAndServe(*port, nil)	
 }
