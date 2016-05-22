@@ -88,6 +88,7 @@ func init() {
 		panic("failed to connect database")
 	}
 	db.AutoMigrate(&User{})
+	db.AutoMigrate(&Session{})
 }
 
 // ======

@@ -19,5 +19,9 @@ func Handler(a *AppContext, w http.ResponseWriter, r *http.Request) (int, error)
 	if err != nil {
 		panic(err)
 	}
-	return 200, nil
+	return http.StatusOK, nil
+}
+
+func SecretHandler(a *AppContext, w http.ResponseWriter, r *http.Request) (int, error) {() {
+	return http.StatusOK, nil
 }

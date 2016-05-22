@@ -1,7 +1,7 @@
 package main
 
 import (
-	"fmt"
+	// "fmt"
 	"time"
 	"encoding/json"
 	"net/http"
@@ -13,21 +13,20 @@ type WebResponce struct {
 	User []User `json:"user"`
 }
 
-// TODO: move to utils, into UnifyCreateResponce (if needed)
-type UserCreateResponce struct {
-	Success bool `json:"success"`
-	ID uint `json:"id"`
+func (u *User) is_authenticated() bool {
+	var sess Session
+	var time = time.Now().Unix()
+	// check session object is not expired
+	return true
 }
 
 func GetHandler(a *AppContext, w http.ResponseWriter, r *http.Request) (int, error) {
 	var user User
+	var resp WebResponce
 	id := r.FormValue("id")
 	q := a.db.Find(&user, id)
 	var count int64
 	q.Count(&count)
-	// fmt.Println("user =", user)
-	// fmt.Println("count =", count)
-	var resp WebResponce
 	if count == 0 {
 		resp = WebResponce{Success: true, Time: time.Now().Unix(), User: []User{}}
 	} else {
@@ -36,16 +35,15 @@ func GetHandler(a *AppContext, w http.ResponseWriter, r *http.Request) (int, err
 	b, err := json.Marshal(resp)
 	if err != nil {
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
-		return 502, err
+		return http.StatusInternalServerError, err
 	}
 	_, err = w.Write(b)
 	if err != nil {
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
-		return 503, err
+		return http.StatusInternalServerError, err
 	}
-	return 200, nil
+	return http.StatusOK, nil
 }
-
 
 func CreateHandler(a *AppContext, w http.ResponseWriter, r *http.Request) (int, error) {
 	if r.Method != http.MethodPost {
@@ -53,31 +51,36 @@ func CreateHandler(a *AppContext, w http.ResponseWriter, r *http.Request) (int, 
 	}
 	email := r.FormValue("email")
 	username := r.FormValue("username")
-
+	if email == "" || username == "" {
+		return http.StatusBadRequest, InvalidRequestError
+	}
 	var (
-		user User 
-		count int64
+		user User
+		users []User
 		success = false
 	)
-	// var 
-	q := a.db.First(&user, "email = ?", email)
-	q.Count(&count)
-	if count == 0 {
-		user = User{Email: email, Username: username}
+	a.db.Select("ID").Find(&users, "email=?", email)
+	if len(users) == 0 {
+		user = User{Email: email, Username: username, IsNew: true}
 		db.Create(&user)
 		success = true
+	} else {
+		user = users[0]
 	}
-	fmt.Println("user=", user, "count=", count)
-	resp := UserCreateResponce{Success: success, ID: user.ID}
+	resp := ModelCreatedResponce{Success: success, ID: user.ID}
 	b, err := json.Marshal(resp)
 	if err != nil {
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
-		return 502, err
+		return http.StatusInternalServerError, err
 	}
 	_, err = w.Write(b)
 	if err != nil {
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
-		return 503, err
+		return http.StatusInternalServerError, err
 	}
-	return 200, nil	
+	return http.StatusOK, nil
+}
+
+func LoginHandler(a *AppContext, w http.ResponseWriter, r *http.Request) (int, error) {
+	return http.StatusOK, nil
 }
