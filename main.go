@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"flag"
+	"time"
 	"io/ioutil"
 	"encoding/json"
 	"net/http"
@@ -20,6 +21,9 @@ var (
 
 const (
 	DB_CONFIG = "config.json"
+	SESSION_DURATION = time.Minute * 10
+	SESSION_MIN_RENEW = time.Minute * 2  // create new session if the latest expires in 'SESSION_MIN_RENEW'
+	SESSION_CODE_LEN = 45
 )
 
 type AppContext struct {
@@ -101,6 +105,8 @@ func main() {
 	http.Handle("/", AppHandler{context, Handler})
 	http.Handle("/auth/get", AppHandler{context, GetHandler})
 	http.Handle("/auth/create", AppHandler{context, CreateHandler})
+	http.Handle("/auth/login", AppHandler{context, LoginHandler})
+	http.Handle("/auth/logged", AppHandler{context, GetLoggedInHandler})
 
 	log.Fatal(http.ListenAndServe(*PORT, nil))
 }
