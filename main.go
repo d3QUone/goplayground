@@ -9,14 +9,17 @@ import (
 	"io/ioutil"
 	"encoding/json"
 	"net/http"
-	"github.com/jinzhu/gorm"
-	_ "github.com/jinzhu/gorm/dialects/postgres"
+	// "github.com/jinzhu/gorm"
+	// _ "github.com/jinzhu/gorm/dialects/postgres"
+	"github.com/astaxie/beego/orm"
+	_ "github.com/lib/pq"
 )
 
 var (
 	PORT = flag.String("port", ":8080", "Listen address")
 	config DBConfig
-	db *gorm.DB
+	// db *gorm.DB
+	db *orm
 )
 
 const (
@@ -27,7 +30,8 @@ const (
 )
 
 type AppContext struct {
-	db *gorm.DB
+	// db *gorm.DB
+	db *orm
 }
 
 type AppHandler struct {
@@ -85,14 +89,20 @@ func ReadConfig(configfile string) (configuration DBConfig) {
 func init() {
 	config = ReadConfig(DB_CONFIG)
 	fmt.Println(config.get())
+
+	orm.RegisterModel(new(User))
+	orm.RegisterModel(new(Session))
+	orm.RegisterDataBase("alias_name", config.Provider, config.get())
+
 	var err error
-	db, err = gorm.Open(config.Provider, config.get())
+	// db, err = gorm.Open(config.Provider, config.get())
+	db, err = orm.NewOrm()
 	if err != nil {
 		fmt.Println(err)
 		panic("failed to connect database")
 	}
-	db.AutoMigrate(&User{})
-	db.AutoMigrate(&Session{})
+	// db.AutoMigrate(&User{})
+	// db.AutoMigrate(&Session{})
 }
 
 // ======
