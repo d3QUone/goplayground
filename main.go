@@ -19,7 +19,7 @@ var (
 	PORT = flag.String("port", ":8080", "Listen address")
 	config DBConfig
 	// db *gorm.DB
-	db *orm
+	db orm.Ormer
 )
 
 const (
@@ -31,7 +31,7 @@ const (
 
 type AppContext struct {
 	// db *gorm.DB
-	db *orm
+	db orm.Ormer
 }
 
 type AppHandler struct {
@@ -68,7 +68,11 @@ type DBConfig struct {
 }
 
 func (c *DBConfig) get() string {
-	return "host=" + c.Host + " port=" + c.Port + " dbname=" + c.Name + " sslmode=disable user=" + c.User + " password=" + c.Pass
+	if len(c.Pass) > 0 {
+		return "host=" + c.Host + " port=" + c.Port + " dbname=" + c.Name + " sslmode=disable user=" + c.User + " password=" + c.Pass
+	} else {
+		return "host=" + c.Host + " port=" + c.Port + " dbname=" + c.Name + " sslmode=disable user=" + c.User
+	}
 }
 
 func ReadConfig(configfile string) (configuration DBConfig) {
@@ -90,17 +94,23 @@ func init() {
 	config = ReadConfig(DB_CONFIG)
 	fmt.Println(config.get())
 
-	orm.RegisterModel(new(User))
-	orm.RegisterModel(new(Session))
-	orm.RegisterDataBase("alias_name", config.Provider, config.get())
+    orm.RegisterDriver(config.Provider, orm.DRPostgres)
+	orm.RegisterDataBase("default", config.Provider, config.get())
 
-	var err error
+	orm.RegisterModel(new(User))
+	// orm.RegisterModel(new(Session))  // error somewhere ???
+
+	fmt.Println("models registered")	
+	
+
+	// var err error
 	// db, err = gorm.Open(config.Provider, config.get())
-	db, err = orm.NewOrm()
-	if err != nil {
-		fmt.Println(err)
-		panic("failed to connect database")
-	}
+	db = orm.NewOrm()
+	fmt.Printf("orm.type = %T, %v", db, db)
+	// if err != nil {
+	// 	fmt.Println(err)
+	// 	panic("failed to connect database")
+	// }
 	// db.AutoMigrate(&User{})
 	// db.AutoMigrate(&Session{})
 }
@@ -110,8 +120,9 @@ func init() {
 // ======
 
 func main() {
-	context := &AppContext{db: db}
-
+	// context := &AppContext{db: db}
+	fmt.Println("ok")
+	/*
 	http.Handle("/", AppHandler{context, Handler})
 	http.Handle("/auth/get", AppHandler{context, GetHandler})
 	http.Handle("/auth/create", AppHandler{context, CreateHandler})
@@ -119,4 +130,5 @@ func main() {
 	http.Handle("/auth/logged", AppHandler{context, GetLoggedInHandler})
 
 	log.Fatal(http.ListenAndServe(*PORT, nil))
+	*/
 }

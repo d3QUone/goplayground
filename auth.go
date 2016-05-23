@@ -1,5 +1,6 @@
 package main
 
+/*
 import (
 	"fmt"
 	"time"
@@ -101,7 +102,7 @@ func LoginHandler(a *AppContext, w http.ResponseWriter, r *http.Request) (int, e
 		return http.StatusInternalServerError, NotAuthorizedError
 	}
 	// create new session
-	session := Session{User: user, Code: generate_code(SESSION_CODE_LEN), ExpiresAt: time.Now().Add(SESSION_DURATION)}
+	session := Session{User: &user, Code: generate_code(SESSION_CODE_LEN), ExpiresAt: time.Now().Add(SESSION_DURATION)}
 	a.db.Create(&session)
 	return http.StatusOK, nil
 }
@@ -120,3 +121,4 @@ func GetLoggedInHandler(a *AppContext, w http.ResponseWriter, r *http.Request) (
 	}
 	return http.StatusOK, nil
 }
+*/
