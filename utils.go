@@ -4,7 +4,22 @@ import (
 	"errors"
 	"time"
 	"math/rand"
+	"database/sql"
 )
+
+// ==== DATABASE HELPERS ====
+
+func GetRes(rows *sql.Rows) (count int) {
+	for rows.Next() {
+		err := rows.Scan(&count)
+		if err != nil {
+			panic(err)
+		}
+	}   
+	return count
+}
+
+// ==== ERRORS ====
 
 var (
 	NotAllowedError = errors.New("Method not allowed")
@@ -14,7 +29,7 @@ var (
 
 type ModelCreatedResponce struct {
 	Success bool `json:"success"`
-	ID uint `json:"id"`
+	ID int `json:"id"`
 }
 
 type ErrorResponce struct {

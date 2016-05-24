@@ -9,14 +9,14 @@ import (
 	"io/ioutil"
 	"encoding/json"
 	"net/http"
-	"github.com/jinzhu/gorm"
-	_ "github.com/jinzhu/gorm/dialects/postgres"
+	"database/sql"
+	_ "github.com/lib/pq"
 )
 
 var (
 	PORT = flag.String("port", ":8080", "Listen address")
 	config DBConfig
-	db *gorm.DB
+	db *sql.DB
 )
 
 const (
@@ -27,7 +27,7 @@ const (
 )
 
 type AppContext struct {
-	db *gorm.DB
+	db *sql.DB
 }
 
 type AppHandler struct {
@@ -64,7 +64,11 @@ type DBConfig struct {
 }
 
 func (c *DBConfig) get() string {
-	return "host=" + c.Host + " port=" + c.Port + " dbname=" + c.Name + " sslmode=disable user=" + c.User + " password=" + c.Pass
+	if len(c.Pass) > 0 {
+		return "host=" + c.Host + " port=" + c.Port + " dbname=" + c.Name + " sslmode=disable user=" + c.User + " password=" + c.Pass
+	} else {
+		return "host=" + c.Host + " port=" + c.Port + " dbname=" + c.Name + " sslmode=disable user=" + c.User
+	}
 }
 
 func ReadConfig(configfile string) (configuration DBConfig) {
@@ -73,7 +77,7 @@ func ReadConfig(configfile string) (configuration DBConfig) {
 		fmt.Printf("Config file '%v' is missing!\n", configfile)
 		panic(err)
 	}
-	file, err :=  ioutil.ReadFile(configfile)  // os.Open(configfile)
+	file, err :=  ioutil.ReadFile(configfile)
 	if err != nil {
 		fmt.Printf("file not found (%v)\n", err)
 		panic(err)
@@ -86,13 +90,26 @@ func init() {
 	config = ReadConfig(DB_CONFIG)
 	fmt.Println(config.get())
 	var err error
-	db, err = gorm.Open(config.Provider, config.get())
+	db, err = sql.Open(config.Provider, config.get())
 	if err != nil {
 		fmt.Println(err)
 		panic("failed to connect database")
 	}
-	db.AutoMigrate(&User{})
-	db.AutoMigrate(&Session{})
+	// migrations
+	var u User
+	if u.NeedMigration() {
+		_, err := db.Exec(u.Schema())
+		if err != nil {
+			panic(err)
+		}
+	}
+	var s Session
+	if s.NeedMigration() {
+		_, err := db.Exec(s.Schema())
+		if err != nil {
+			panic(err)
+		}
+	}
 }
 
 // ======

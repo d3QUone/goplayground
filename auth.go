@@ -14,28 +14,20 @@ type WebResponce struct {
 }
 
 func (u *User) is_authenticated(a *AppContext) bool {
-	var sessions []Session
+	// var sessions []Session
 	var time = time.Now()
-	// check session object is not expired
-	a.db.Where("expires_at>?", time).Order("expires_at").Find(&sessions)
-	fmt.Println("sessions =", sessions)
+	rows, err := a.db.Query("SELECT s.*, u.* FROM `sessions` s JOIN `users` u ON s.user_id = u.id WHERE s.expires_at > $1 AND u.email = $2;", time, u.Email)
+	fmt.Println("sessions =", rows)
+	fmt.Println("err =", err)
 	return true
 }
 
 func GetHandler(a *AppContext, w http.ResponseWriter, r *http.Request) (int, error) {
-	var user User
-	var resp WebResponce
 	id := r.FormValue("id")
-	a.db.Find(&user, id)
-	fmt.Printf("users (%T)\n", user)
-	
-	// TODO: fix "get" user
-
-	// if count == 0 {
-	// 	resp = WebResponce{Success: true, Time: time.Now().Unix(), User: []User{}}
-	// } else {
-		resp = WebResponce{Success: true, Time: time.Now().Unix(), User: []User{user}}
-	// }
+	if id == "" {
+		return http.StatusBadRequest, InvalidRequestError
+	}
+	resp := WebResponce{Success: true, Time: time.Now().Unix(), User: []User{}}
 	b, err := json.Marshal(resp)
 	if err != nil {
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
@@ -58,18 +50,16 @@ func CreateHandler(a *AppContext, w http.ResponseWriter, r *http.Request) (int, 
 	if email == "" || username == "" {
 		return http.StatusBadRequest, InvalidRequestError
 	}
-	var user User
-	var users []User
 	var success = false
-	a.db.Select("ID").Where("email=?", email).Find(&users)
-	if len(users) == 0 {
-		user = User{Email: email, Username: username, IsNew: true}
-		a.db.Create(&user)
-		success = true
-	} else {
-		user = users[0]
+	var user_id = -1
+	count, err := a.db.Query("SELECT COUNT(id) FROM users WHERE email = $1;", email)
+	if GetRes(count) == 0 {
+		res, err := a.db.Query("INSERT INTO users (email, username) VALUES ($1, $2) RETURNING id;", email, username)
+		if err == nil {
+			user_id = GetRes(res)
+		}
 	}
-	resp := ModelCreatedResponce{Success: success, ID: user.ID}
+	resp := ModelCreatedResponce{Success: success, ID: user_id}
 	b, err := json.Marshal(resp)
 	if err != nil {
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
@@ -91,32 +81,30 @@ func LoginHandler(a *AppContext, w http.ResponseWriter, r *http.Request) (int, e
 	if email == "" {
 		return http.StatusBadRequest, InvalidRequestError
 	}
-	// load user
-	var user User
-	var users []User
-	a.db.Where("email=?", email).Find(&users)
-	if len(users) == 1 {
-		user = users[0]
-	} else {
-		return http.StatusInternalServerError, NotAuthorizedError
+	id, err := a.db.Query("SELECT id FROM users WHERE email = $1;", email)
+	if err == nil {
+		s_id, err := a.db.Query("INSERT INTO sessions (user_id, code, expires_at) VALUES ($1, $2, $3) RETURNING id;", GetRes(id), generate_code(SESSION_CODE_LEN), time.Now().Add(SESSION_DURATION))
+		if err == nil {
+			resp := ModelCreatedResponce{Success: true, ID: GetRes(s_id)}
+			b, _ := json.Marshal(resp)
+			w.Write(b)
+			return http.StatusOK, nil
+		}
 	}
-	// create new session
-	session := Session{User: user, Code: generate_code(SESSION_CODE_LEN), ExpiresAt: time.Now().Add(SESSION_DURATION)}
-	a.db.Create(&session)
-	return http.StatusOK, nil
+	return http.StatusInternalServerError, err
 }
 
 func GetLoggedInHandler(a *AppContext, w http.ResponseWriter, r *http.Request) (int, error) {
-	var time = time.Now()
-	var sessions []Session
+	// var time = time.Now()
+	// var sessions []Session
 	// var users []User
 	// TODO: select related User Object
-	a.db.Where("expires_at>?", time).Find(&sessions).Association("UserID")
-	fmt.Printf("found %v sessions (%T):\n%v\n", len(sessions), sessions, sessions)
-	for i := 0; i < len(sessions); i++ {
-		s := sessions[i]
-		fmt.Printf("(%T)=%v\n", s, s)
-		// users = append(users, s.User)
-	}
+	// a.db.Where("expires_at>?", time).Find(&sessions).Association("UserID")
+	// fmt.Printf("found %v sessions (%T):\n%v\n", len(sessions), sessions, sessions)
+	// for i := 0; i < len(sessions); i++ {
+	// 	s := sessions[i]
+	// 	fmt.Printf("(%T)=%v\n", s, s)
+	// 	// users = append(users, s.User)
+	// }
 	return http.StatusOK, nil
 }
