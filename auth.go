@@ -1,16 +1,16 @@
 package main
 
 import (
-	"fmt"
-	"time"
 	"encoding/json"
+	"fmt"
 	"net/http"
+	"time"
 )
 
 type WebResponce struct {
-	Success bool `json:"success"`
-	Time int64 `json:"time"`
-	User []User `json:"user"`
+	Success bool   `json:"success"`
+	Time    int64  `json:"time"`
+	User    []User `json:"user"`
 }
 
 func (u *User) is_authenticated(a *AppContext) bool {
